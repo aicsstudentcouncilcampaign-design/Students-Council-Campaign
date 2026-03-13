@@ -381,18 +381,19 @@ function loadAdminDashboard() {
     
     appState.positions.forEach(position => {
         const candidates = appState.candidates.filter(c => c.positionId === position.id);
-        const votesForPos = {};
-        candidates.forEach(c => votesForPos[c.id] = 0);
         
-        Object.values(appState.votes).forEach(voterVotes => {
-            const candidateId = voterVotes[position.id];
-            if (candidateId && votesForPos.hasOwnProperty(candidateId)) {
-                votesForPos[candidateId]++;
-            }
-        });
-        
+        // Count votes for each candidate
         candidates.forEach(candidate => {
-            const votes = votesForPos[candidate.id] || 0;
+            let votes = 0;
+            
+            // Go through all voters' votes
+            Object.values(appState.votes).forEach(voterVotes => {
+                // Check if this voter voted for this candidate in this position
+                if (voterVotes && voterVotes[position.id] === candidate.id) {
+                    votes++;
+                }
+            });
+            
             resultsHtml += `
                 <tr>
                     <td><strong>${position.title}</strong></td>
@@ -402,6 +403,11 @@ function loadAdminDashboard() {
             `;
         });
     });
+
+    // If no results yet
+    if (!resultsHtml) {
+        resultsHtml = '<tr><td colspan="3" style="text-align:center; padding:2rem;">No votes cast yet</td></tr>';
+    }
 
     let positionsList = '';
     appState.positions.forEach(position => {
@@ -454,18 +460,20 @@ function loadAdminDashboard() {
                 </div>
 
                 <div class="admin-tab-content active" id="resultsTab">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Position</th>
-                                <th>Candidate</th>
-                                <th>Votes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${resultsHtml}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Position</th>
+                                    <th>Candidate</th>
+                                    <th>Votes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${resultsHtml}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="admin-tab-content" id="positionsTab">
@@ -523,7 +531,6 @@ function loadAdminDashboard() {
         </section>
     `;
 }
-
 // Reset all votes
 window.resetVotes = function() {
     if (confirm('Are you sure you want to reset ALL votes? This cannot be undone.')) {
@@ -1146,8 +1153,9 @@ function init() {
             voteSummary
         );
         
+        // In the confirmVotesBtn click handler, after sendEmailConfirmation:
         document.getElementById('reviewModal').style.display = 'none';
-        saveData();
+        saveData(); 
         showToast('✅ Vote recorded! Check your email', 'success');
     });
 
